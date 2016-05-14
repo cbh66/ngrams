@@ -1,5 +1,5 @@
 
-from NGramTrie import NGramTrie
+from ngramtrie import NGramTrie
 import pprint
 
 
