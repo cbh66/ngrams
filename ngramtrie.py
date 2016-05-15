@@ -66,3 +66,10 @@ class NGramTrie:
     def __repr__(self):
         return _trie_to_str_recursive(self.root["next"], "")[:-1]
 
+
+    def next_most_likely(self, string):
+        pass # TODO: go into trie on last n-1 chars, return most likely next one
+
+    def next_random(self, string):
+        pass # TODO: like above, but select with uniform number in [0, num-occurences]
+

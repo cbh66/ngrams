@@ -1,7 +1,17 @@
 
 from ngramtrie import NGramTrie
-import pprint
+from math import sqrt
 
+
+def dot_product(lang1, lang2):
+    sum = 0
+    for key in lang1:
+        if key in lang2:
+            sum += lang1[key] * lang2[key]
+    return sum
+
+def norm(lang1):
+    return sqrt(dot_product(lang1, lang1))
 
 
 class Language:
@@ -29,7 +39,7 @@ class Language:
         return " "
 
     def standardize(self, char):
-        return char.upper()
+        return char.casefold()
 
     def first_gram(self):
         return " "
@@ -65,6 +75,9 @@ class Language:
         return string[:-1]
 
     def compare(self, other):
-        # Get frequencies, calculate similarity
-        return 0
+        lang1 = self.n_grams.frequencies()
+        lang2 = other.n_grams.frequencies()
+        return dot_product(lang1, lang2) / (norm(lang1) * norm(lang2))
+
+
 
