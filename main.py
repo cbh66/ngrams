@@ -1,5 +1,7 @@
 
 import sys
+import os
+import os.path
 import argparse
 import language_match
 
@@ -17,6 +19,7 @@ DESCRIPTION = ("Compares documents written in unknown languages to known languag
 "If the language name is the 'Unknown' keyword, the language will be classified.")
 
 # Eventually: add option for traversing directory structure
+# Also: allow wildcards and such.  See expanduser() and expandvars()
 parser = argparse.ArgumentParser(description=DESCRIPTION,
                     formatter_class=argparse.RawDescriptionHelpFormatter)
 parser.add_argument("--n-gram-max", "-n", metavar="N", type=int,
@@ -48,8 +51,15 @@ def find_langs(args):
         name = name_and_files[0]
         if name not in langs:
             langs[name] = []
-        for file in name_and_files[1:]: # if directory, recurse
-            langs[name].append(file)
+        for file in name_and_files[1:]:
+            if os.path.isfile(file):
+                langs[name].append(file)
+            elif os.path.isdir(file):
+                directory = file
+                files = [os.path.join(directory, file) for file in os.listdir(directory)]
+                langs[name] += [file for file in files if os.path.isfile(file)]
+            else:
+                print("File or directory {} does not exist".format(file))
 
     return langs
 
@@ -57,10 +67,10 @@ def find_langs(args):
 
 def report_matches(unknown, reference_langs, args):
     matches = language_match.best_matches(unknown, reference_langs, args.n_gram_max, args.matches)
-    print("Best matches for", unknown)
+    print("Best match{} for".format("es" if args.matches != 1 else ""), repr(unknown))
     pad = max([len(name) for (name, score) in matches])
     for (name, score) in matches:
-        print("\t", name.ljust(pad), "\t{:3.2%}".format(score))
+        print("\t", name.ljust(pad), "\t{:>6.2%}".format(score))
 
 
 

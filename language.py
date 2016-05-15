@@ -77,7 +77,11 @@ class Language:
     def compare(self, other):
         lang1 = self.n_grams.frequencies()
         lang2 = other.n_grams.frequencies()
-        return dot_product(lang1, lang2) / (norm(lang1) * norm(lang2))
+        denom = norm(lang1) * norm(lang2)
+        if denom == 0:
+            return 0
+        else:
+            return dot_product(lang1, lang2) / denom
 
 
 

@@ -11,7 +11,10 @@ def read_languages(file_dict, n_max):
     for lang in file_dict:
         results[lang] = Language(n_max)
         for filename in file_dict[lang]:
-            results[lang].read_from_file(filename)
+            try:
+                results[lang].read_from_file(filename)
+            except:
+                print("Could not read file", filename)
     return results
 
 def best_matches(filename, reference_langs, n_max, amt=None):
