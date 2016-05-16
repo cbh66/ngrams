@@ -37,7 +37,7 @@ parser.add_argument("--n-gram-max", "-n", metavar="N", type=int,
                     help="max size n-gram to store for each language")
 parser.add_argument("--source", "-s", type=argparse.FileType("r"), default=sys.stdin,
                     help="file containing list of languages to process (defaults to stdin)")
-parser.add_argument("--classify", "-c",
+parser.add_argument("--classify", "-c", action="append", default=[],
                     help="other files to classify in addition to those marked Unknown " +
                     "(may be used multiple times)")
 parser.add_argument("--matches", "-m", type=int,
@@ -51,6 +51,29 @@ parser.add_argument("--data", "-d", default=None,  # Just a flag?  Make hidden f
 parser.set_defaults(n_gram_max=3,
                     unknown="Unknown",
                     matches=5)
+
+
+def filter_files(lst):
+    """ Returns a list of all files specified.
+
+    In particular, reports an error if a file does not exist, and finds files
+    within any directories that are specified.
+    Args:
+        lst: A list of supposed file and directory names
+    Returns:
+        A list of valid file names.
+    """
+    results = []
+    for name in lst:
+        if os.path.isfile(name):
+            results.append(name)
+        elif os.path.isdir(name):
+            directory = name
+            files = [os.path.join(directory, file) for file in os.listdir(directory)]
+            results += [file for file in files if os.path.isfile(file)]
+        else:
+            print("File or directory {} does not exist".format(file))
+    return results
 
 
 def find_langs(args):
@@ -76,16 +99,8 @@ def find_langs(args):
         name = name_and_files[0]
         if name not in langs:
             langs[name] = []
-        for file in name_and_files[1:]:
-            if os.path.isfile(file):
-                langs[name].append(file)
-            elif os.path.isdir(file):
-                directory = file
-                files = [os.path.join(directory, file) for file in os.listdir(directory)]
-                langs[name] += [file for file in files if os.path.isfile(file)]
-            else:
-                print("File or directory {} does not exist".format(file))
-
+        langs[name] += filter_files(name_and_files[1:])
+    langs[args.unknown] += filter_files(args.classify)
     return langs
 
 
