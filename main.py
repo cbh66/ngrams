@@ -1,4 +1,24 @@
+""" A program for classifying languages
 
+    Written by Colin Hamilton, May 2016
+
+    Inspired by the Tufts University COMP 11 Final project "trigrams", Fall 2015
+
+    TODO:
+    - Remove details from description (a help message should be concise);
+        add details to README
+    - Allow wildcards and such in filenames.  See expanduser(), expandvars(), glob
+    - Add caching for speedup (either single files, by language, or by directory)
+        - Need to figure out when to use cache, when to update
+        - Is a hybrid system possible?  Have cache keep track of filenames;
+            check them off if they're in cache, else read these new files
+            - Gotta make sure to minimize risk of accidental duplication of data,
+                ie having a file's data in cache and then reading it again in
+                addition to that
+            - Would need a hard refresh option, probably one for individual
+                languages, and one to refresh all languages
+    - Add option for directory traversal
+"""
 import sys
 import os
 import os.path
@@ -6,6 +26,7 @@ import argparse
 import language_match
 
 
+# Make more concise, add details to README
 DESCRIPTION = ("Compares documents written in unknown languages to known languages.  " +
 "An input file must be provided with known languages, with lines of the form" +
 """
@@ -18,8 +39,7 @@ DESCRIPTION = ("Compares documents written in unknown languages to known languag
 "or the name of a directory containing files in that language.  " +
 "If the language name is the 'Unknown' keyword, the language will be classified.")
 
-# Eventually: add option for traversing directory structure
-# Also: allow wildcards and such.  See expanduser() and expandvars()
+
 parser = argparse.ArgumentParser(description=DESCRIPTION,
                     formatter_class=argparse.RawDescriptionHelpFormatter)
 parser.add_argument("--n-gram-max", "-n", metavar="N", type=int,
@@ -41,9 +61,23 @@ parser.set_defaults(n_gram_max=3,
                     unknown="Unknown",
                     matches=5)
 
-# finds filenames associated with languages, returns dict of langs to filename list
+
 def find_langs(args):
-    # If not directory traversal option....
+    """ Finds all languages and associated filenames based on arguments
+
+    Returns:
+        A dict mapping language names to a list of filenames
+    TODO:
+        Handle an option for automatic directory traversal, ie
+        --- English
+        |  |-- American
+        |  |-- British
+        |-- French
+        --- Greek
+           |-- Ancient
+           --- Modern
+        With languages mapping to something like English/American
+    """
     infile = args.source
     langs = {}
     for line in infile:
@@ -66,6 +100,12 @@ def find_langs(args):
 
 
 def report_matches(unknown, reference_langs, args):
+    """ Matches an unknown document against known languages, prints results
+
+    Args:
+        unknown: The name of a file to classify
+        reference_langs: A dict mapping language names to Language objects
+    """
     matches = language_match.best_matches(unknown, reference_langs, args.n_gram_max, args.matches)
     print("Best match{} for".format("es" if args.matches != 1 else ""), repr(unknown))
     pad = max([len(name) for (name, score) in matches])
@@ -75,6 +115,7 @@ def report_matches(unknown, reference_langs, args):
 
 
 def main(args):
+    """Runs the program after args have been processed"""
     reference_langs = find_langs(args) # or from cache
     unknowns = reference_langs.pop(args.unknown, [])
     reference_langs = language_match.read_languages(reference_langs, args.n_gram_max)
