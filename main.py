@@ -5,8 +5,6 @@
     Inspired by the Tufts University COMP 11 Final project "trigrams", Fall 2015
 
     TODO:
-    - Remove details from description (a help message should be concise);
-        add details to README
     - Allow wildcards and such in filenames.  See expanduser(), expandvars(), glob
     - Add caching for speedup (either single files, by language, or by directory)
         - Need to figure out when to use cache, when to update
@@ -15,9 +13,13 @@
             - Gotta make sure to minimize risk of accidental duplication of data,
                 ie having a file's data in cache and then reading it again in
                 addition to that
+            - Could keep filenames/last modified date to see if it's up to date
             - Would need a hard refresh option, probably one for individual
                 languages, and one to refresh all languages
     - Add option for directory traversal
+    - Implement prediction -- language name, optional "seed", num letters to
+        predict, choose randomized or max likelihood (both using randomization
+        for tiebreakers)
 """
 import sys
 import os
@@ -26,18 +28,7 @@ import argparse
 import language_match
 
 
-# Make more concise, add details to README
-DESCRIPTION = ("Compares documents written in unknown languages to known languages.  " +
-"An input file must be provided with known languages, with lines of the form" +
-"""
-    English english1.txt english2.txt
-    French  french/
-    English english3.txt
-    Unknown tbd.txt
-""" +
-"Where each line has a language name and the name of 1 or more files written in that language, " +
-"or the name of a directory containing files in that language.  " +
-"If the language name is the 'Unknown' keyword, the language will be classified.")
+DESCRIPTION = ("Compares documents written in unknown languages to known languages.")
 
 
 parser = argparse.ArgumentParser(description=DESCRIPTION,
@@ -54,7 +45,7 @@ parser.add_argument("--matches", "-m", type=int,
 parser.add_argument("--unknown", "-u",
                     help="the keyword designating unknown languages in input file " +
                         "(default '%(default)s')")
-parser.add_argument("--data", "-d", default=None,
+parser.add_argument("--data", "-d", default=None,  # Just a flag?  Make hidden files for langs?
                     help="file to use as cache for languages") #read and write to
 
 parser.set_defaults(n_gram_max=3,
