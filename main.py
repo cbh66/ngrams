@@ -5,7 +5,6 @@
     Inspired by the Tufts University COMP 11 Final project "trigrams", Fall 2015
 
     TODO:
-    - Allow wildcards and such in filenames.  See expanduser(), expandvars(), glob
     - Add caching for speedup (either single files, by language, or by directory)
         - Need to figure out when to use cache, when to update
         - Is a hybrid system possible?  Have cache keep track of filenames;
@@ -24,7 +23,9 @@
 import sys
 import os
 import os.path
+import glob
 import argparse
+import braceexpand
 import language_match
 
 
@@ -53,6 +54,29 @@ parser.set_defaults(n_gram_max=3,
                     matches=5)
 
 
+def expand_file_expression(name):
+    """ Expands Unix-style wildcards in nearly the same way the shell would
+
+    Handles home directory shortcuts, brace expansion, environment variables,
+    and wildcard characters.
+    Args:
+        name: A string representing a filename to potentially expand
+    Returns:
+        A list of file names matching the pattern.  The list may be empty.
+        All names represent existing files (though could potentially be
+        broken symlinks).
+    """
+    try:
+        names = braceexpand.braceexpand(name)
+    except braceexpand.UnbalancedBracesError:
+        names =[name]
+    names = [os.path.expanduser(os.path.expandvars(elem)) for elem in names]
+    results = []
+    for elem in names:
+        results.extend(glob.glob(elem))
+    return results
+
+
 def filter_files(lst):
     """ Returns a list of all files specified.
 
@@ -64,15 +88,15 @@ def filter_files(lst):
         A list of valid file names.
     """
     results = []
-    for name in lst:
-        if os.path.isfile(name):
-            results.append(name)
-        elif os.path.isdir(name):
-            directory = name
-            files = [os.path.join(directory, file) for file in os.listdir(directory)]
-            results += [file for file in files if os.path.isfile(file)]
-        else:
-            print("File or directory {} does not exist".format(file))
+    for elem in lst:
+        for name in expand_file_expression(elem):
+            if os.path.isfile(name):
+                results.append(name)
+            elif os.path.isdir(name):
+                directory = name
+                files = [os.path.join(directory, file) for file in os.listdir(directory)]
+                results += [file for file in files if os.path.isfile(file)]
+            # else not possible; file must exist
     return results
 
 
