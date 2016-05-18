@@ -2,6 +2,7 @@
 
     Written by Colin Hamilton, May 2016
 """
+import json
 from language import Language
 
 def match(unknown, known):
@@ -18,7 +19,7 @@ def match(unknown, known):
     return sorted(results, key=lambda x: -x[1])
 
 
-def read_languages(file_dict, n_max):
+def read_languages(file_dict, n_max, cachefiles={}):
     """ Creates a set of Language objects with the given languages and files.
     Args:
         file_dict: A dict mapping language names to a list of filenames
@@ -33,11 +34,25 @@ def read_languages(file_dict, n_max):
     results = {}
     for lang in file_dict:
         results[lang] = Language(n_max)
+        cachefile = ".{}.ngramcache".format(lang)
+        try:
+            with open(cachefile, "r") as cache:
+                if (results[lang].read_cache(json.load(cache),
+                                        expected=file_dict[lang])):
+                    print("Cache up to date for {}".format(lang))
+                    continue  # success
+        except Exception:
+            pass
+        results[lang] = Language(n_max)  # Overwrite any old results
+        print("Cache not up to date for {}".format(lang))
+        # if cache does not exist, is not up to date, or is corrupted
         for filename in file_dict[lang]:
             try:
-                results[lang].read_from_file(filename)
+                results[lang].add_file(filename)
             except Exception:
                 print("Could not read file", filename)
+        with open(cachefile, "w") as cachefile:
+            cachefile.write(json.dumps(results[lang].to_cache(file_dict[lang])))
     return results
 
 
@@ -56,6 +71,6 @@ def best_matches(filename, reference_langs, n_max, amt=None):
     if amt is None:
         amt = len(reference_langs)
     unknown = Language(n_max)
-    unknown.read_from_file(filename)
+    unknown.add_file(filename)
     comparisons = match(unknown, reference_langs)
     return comparisons[: min(amt, len(comparisons))]

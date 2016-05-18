@@ -2,6 +2,8 @@
 
     Written by Colin Hamilton, May 2016
 """
+import os
+import json
 from math import sqrt
 from ngramtrie import NGramTrie
 
@@ -23,7 +25,7 @@ class Language:
     """ A language maintains linguistic statistics, and uses them for comparisons.
 
     In general, a Language object should be created for each language you wish to
-    analyze, including for any unknown languages.  Then read_from_file should be
+    analyze, including for any unknown languages.  Then add_file should be
     called for each document you wish to analyze.
 
     n-grams are currently the mechanism used, so the max size of these n-grams should
@@ -91,7 +93,7 @@ class Language:
         return " "
 
 
-    def read_from_file(self, filename):
+    def add_file(self, filename):
         """ Analyses the given file, integrating it into the Language.
 
         Each character from the file is transformed with the transform() method.
@@ -117,6 +119,35 @@ class Language:
             for char in self.last_gram():
                 gram = _update(gram, char)
         self.n_grams = trie
+
+
+
+    def read_cache(self, cache, expected=[]):
+        """Returns True if successful"""
+        found = {}   # Should probably be done in language_match
+        for file in expected:
+            found[file] = False
+        if "files" in cache:
+            for file in cache["files"]:
+                if os.path.getmtime(file) > cache["files"][file]:
+                    return False   # A more recent version is available
+                found[file] = True
+        if "n" not in cache:
+            return False
+        self.n_grams = NGramTrie(cache["n"])
+        if "grams" not in cache:
+            return False
+        for gram in cache["grams"]:
+            self.n_grams.add(gram, count=cache["grams"][gram])
+        return True
+
+
+    def to_cache(self, files):
+        cache = {"files":{}, "n": self.n_grams.n_max, "grams": {}}
+        for file in files:
+            cache["files"][file] = os.path.getmtime(file)
+        cache["grams"] = self.n_grams.gram_counts()
+        return cache
 
 
     def __str__(self):
@@ -147,3 +178,9 @@ class Language:
         else:
             return dot_product(lang1, lang2) / denom
 
+
+    def predict_next_char(self, start, random=True):
+        if random:
+            return self.n_grams.next_random(start)
+        else:
+            return self.n_grams.next_most_likely(start)

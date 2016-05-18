@@ -7,12 +7,24 @@
             You can just add more count integers if longer grams are put in.
 """
 
+import random
 
 # For the recursive functions, a recursive representation of a trie
 #   is defined as follows:  a trie is an object with "count" and "next"
 #   keys.  The former is the total number of n-grams counted in the trie.
 #   The latter is a dict whose keys are characters and whose values
 #   are tries.
+
+def _trie_at(string, trie):
+    """Goes into the trie, returns sub-trie at the given string, or None"""
+    if len(string) <= 0:
+        return trie
+    if string[0] not in trie["next"]:
+        #print(string[0], trie)
+        return None
+    return _trie_at(string[1:], trie["next"][string[0]])
+
+
 def _add_ngram_recursive(ngram, trie, count=1):
     """Adds ngram to trie count times"""
     if len(ngram) <= 0: return
@@ -29,6 +41,21 @@ def _trie_to_str_recursive(trie, gram_so_far):
         string += '"' + gram_so_far + char + '" : ' + str(trie[char]["count"]) + "\n"
         string += _trie_to_str_recursive(trie[char]["next"], gram_so_far + char)
     return string
+
+
+def weighted_random(probabilities):
+    if sum(probabilities.values()) <= 0:    # If all are zero, make all equally likely
+        new_probs = {}
+        for key in probabilities:
+            new_probs[key] = 1
+        probabilities = new_probs
+    index = random.randint(0, sum(probabilities.values()))
+    for key in probabilities:
+        index -= probabilities[key]
+        if index <= 0:
+            return key
+    return None        # Should never get here
+
 
 
 
@@ -106,6 +133,24 @@ class NGramTrie:
         return dict(self._frequencies_recursive(self.root, 0, depth, ""))
 
 
+    def _counts_recursive(self, trie, depth_goal, gram_so_far):
+        """returns a list of (string, count) tuples from the specified depth"""
+        if depth_goal <= 0:
+            return [(gram_so_far, trie["count"])]
+        list = []
+        for char in trie["next"]:
+            list += self._counts_recursive(trie["next"][char], depth_goal - 1,
+                                            gram_so_far + char)
+        return list
+
+
+    def gram_counts(self, depth=-1):
+        if depth > self.n_max or depth < 0:
+            depth = self.n_max
+        return dict(self._counts_recursive(self.root, depth, ""))
+
+
+
     def __str__(self):
         """Represents a trie as a dict"""
         return str(self.frequencies(self.n_max))
@@ -115,9 +160,39 @@ class NGramTrie:
         return _trie_to_str_recursive(self.root["next"], "")[:-1]
 
 
+
     def next_most_likely(self, string):
-        pass # TODO: go into trie on last n-1 chars, return most likely next one
+        trie = None
+        num_chars = min(len(string), self.n_max - 1)
+        while trie is None and num_chars >= 0:
+            trie = _trie_at(string[-num_chars:], self.root)
+            num_chars -= 1
+        if trie is None:  # No prediction can be made
+            return ""
+        probabilities = {}
+        for key in trie["next"]:
+            if trie["next"][key] is None:
+                probabilities[key] = 0
+            else:
+                probabilities[key] = trie["next"][key]["count"]
+        return weighted_random(probabilities)
+
 
     def next_random(self, string):
-        pass # TODO: like above, but select with uniform number in [0, num-occurences]
+        trie = None
+        num_chars = min(len(string), self.n_max - 1)
+        while (not trie or not trie["next"]) and num_chars >= 0:
+            substr = "" if num_chars == 0 else string[-num_chars:]
+            trie = _trie_at(substr, self.root)
+            num_chars -= 1
+        if not trie or not trie["next"]:  # No prediction can be made
+            return ""
+        probabilities = {}
+        for key in trie["next"]:
+            if trie["next"][key] is None:
+                probabilities[key] = 0
+            else:
+                probabilities[key] = trie["next"][key]["count"]
+        result = weighted_random(probabilities)
+        return result
 

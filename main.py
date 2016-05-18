@@ -7,6 +7,10 @@
     TODO:
     - Add caching for speedup (either single files, by language, or by directory)
         - Need to figure out when to use cache, when to update
+        - Only need to store leaves; then add those grams x times, automatically
+            populating parents.  In current form, no way or need to add grams of
+            length less than n, right?  Unless the tree auto-expands....
+            - In that case, could add dummy empty string nodes to everything?
         - Is a hybrid system possible?  Have cache keep track of filenames;
             check them off if they're in cache, else read these new files
             - Gotta make sure to minimize risk of accidental duplication of data,
@@ -16,9 +20,6 @@
             - Would need a hard refresh option, probably one for individual
                 languages, and one to refresh all languages
     - Add option for directory traversal
-    - Implement prediction -- language name, optional "seed", num letters to
-        predict, choose randomized or max likelihood (both using randomization
-        for tiebreakers)
 """
 import sys
 import argparse
